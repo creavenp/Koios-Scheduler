@@ -1,1 +1,15 @@
 # Koios-Scheduler
+
+This code runs a Flask application that initally creates a job from the python APscheduler library, which will call the KoiosSchedulerFunction function on an hourly basis. 
+
+The KoiosSchedulerFunction function will take the input of a dictionary called scheduler_dict, initialized in main, which is a python dictionary that contains all of the scheduler information from the MySQL "schedule_notification" table. In the acutal function, it will at first connect to the "mcs" MySQL database distinguished by variable cnx, creating a cursor that will be able to parse through the tables. After creation of the cursor a MySQL query is created that will then be executed with the cursor to retrieve the information from the schedule_notification table. 
+
+The for loop iterates through each entry in the schedule_notification table, at first checking if the key for the scheduler_dict is in the dictionary already, and if that key is meant to be active (is_active = 1 means that that schedule should be running, 0 means should be stopped). If the key is not in the dictionary yet, and the is_active flag = 1, the scheduler data is then passed to the create_cronExp function, which will then take the Koios specific scheduler format, and convert it to Cron Regex format, placing each aspect into an array called cronArr. After this the scheduler_dict, with key = schedule_id, has the information of that table entry dumped into the dictionary. 
+
+Once this is completed, the schedule is then added as a job to be running, with it's id as schedule_id, and trigger as a Cron expression. **The function at the moment that is called by this job is just one that prints to the command line, however, it ultimately is meant to be one that sends the message, title, and study_id information from the scheduler_notification table, to a server that will push those messages out accordingly.** 
+
+Now, if the key is in the dictionary, the is_active flag = 1, and the sync_flag flag = 1, then this implies that there has been edit in that specific scheduler (sync_flag serves to imply that a change or update was made, that was not a deletion or removal of the job on the server side). If this is the case, first the initial schedule is removed, the key-value pair in the dictionary is deleted, and then the exact process described in the initial case above is performed. However, an added step is added where the cursor will go into the MySQL database, and using the schedule_id as a the entry indicator, finds the specific entry and updates its sync_flag from 1 to 0, since the change has just been made.
+
+Lastly, if the key is in the scheduler_dict, and is_active = 0 or None (essesntially Null), then then the job is removed, and the key-value pair is removed from the dictionary. None is meant to show that the schedule has deleted entirely from the database, which would not be triggered simply by is_active = 0.
+
+Lastly the cursor is closesed as well as the connection to the MySQL database (cnx). 
